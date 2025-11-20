@@ -1,0 +1,5 @@
+{
+  "name": "PlaquePro Configurator",
+  "description": "Professional grade QR plaque configurator with 3D preview, PDF export, and CNC-ready DXF generation.",
+  "requestFramePermissions": []
+}
