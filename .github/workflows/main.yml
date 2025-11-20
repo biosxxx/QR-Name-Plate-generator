@@ -1,0 +1,44 @@
+name: Deploy static content to Pages
+
+on:
+  # Запуск при пуше в ветку main
+  push:
+    branches: ["main"]
+
+  # Возможность ручного запуска из вкладки Actions
+  workflow_dispatch:
+
+# Права, необходимые для деплоя на Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Разрешаем только один одновременный деплой, пропускаем незавершенные
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Загружаем весь репозиторий '.'
+          # Если сайт лежит в папке (например 'public'), укажи 'public'
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
