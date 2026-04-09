@@ -1,149 +1,228 @@
 import React from 'react';
 import { PlaqueConfig, MaterialType } from '../types';
+import { StepExportPanel } from './StepExportPanel';
 
 interface ControlsProps {
   config: PlaqueConfig;
+  autoUpdate: boolean;
+  validationMessage: string;
+  isUpdatingPreview: boolean;
+  isGeneratingPdf: boolean;
+  isExportingDxf: boolean;
   onChange: (newConfig: PlaqueConfig) => void;
+  onAutoUpdateChange: (enabled: boolean) => void;
+  onGeneratePreview: () => void;
   onDownloadPDF: () => void;
   onDownloadDXF: () => void;
-  isProcessing: boolean;
+  onShowDrawing: () => void;
 }
 
-export const Controls: React.FC<ControlsProps> = ({ config, onChange, onDownloadPDF, onDownloadDXF, isProcessing }) => {
-  
-  const handleChange = (field: keyof PlaqueConfig, value: any) => {
+const materials = [
+  { id: MaterialType.STEEL, label: 'Stainless steel' },
+  { id: MaterialType.COPPER, label: 'Copper' },
+  { id: MaterialType.GRANITE, label: 'Black granite' },
+];
+
+export const Controls: React.FC<ControlsProps> = ({
+  config,
+  autoUpdate,
+  validationMessage,
+  isUpdatingPreview,
+  isGeneratingPdf,
+  isExportingDxf,
+  onChange,
+  onAutoUpdateChange,
+  onGeneratePreview,
+  onDownloadPDF,
+  onDownloadDXF,
+  onShowDrawing,
+}) => {
+  const handleChange = (field: keyof PlaqueConfig, value: PlaqueConfig[keyof PlaqueConfig]) => {
     onChange({ ...config, [field]: value });
   };
 
-  const materials = [
-    { id: MaterialType.STEEL, label: 'Stainless Steel', color: 'bg-gray-300' },
-    { id: MaterialType.COPPER, label: 'Brushed Copper', color: 'bg-orange-300' },
-    { id: MaterialType.GOLD, label: 'Polished Gold', color: 'bg-yellow-400' },
-    { id: MaterialType.GRANITE, label: 'Black Granite', color: 'bg-gray-800 border-gray-600' },
-  ];
-
-  const InputClass = "w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all";
-  const LabelClass = "block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2";
-
   return (
-    <div className="space-y-8 p-1">
-      {/* Content Section */}
-      <div className="bg-gray-800/50 p-6 rounded-2xl border border-gray-700/50">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-          Engraving Content
-        </h3>
-        <div className="space-y-4">
+    <section className="overflow-hidden rounded-[16px] border border-[var(--cas-outline-variant)] bg-[var(--cas-surface-low)] shadow-[var(--cas-elevation-1)]">
+      <div className="px-6 pb-4 pt-6">
+        <h2 className="text-[22px] font-normal text-[var(--cas-on-surface)]">Parameters</h2>
+        <p className="mt-1 text-xs text-[var(--cas-on-surface-variant)]">All units are in millimeters (mm).</p>
+      </div>
+
+      <div className="flex flex-col gap-5 px-6 pb-6">
+        <div>
+          <label className="mb-2 ml-1 block text-xs font-medium text-[var(--cas-on-surface-variant)]">Engraving text</label>
+          <input
+            type="text"
+            value={config.text}
+            onChange={(event) => handleChange('text', event.target.value)}
+            className="w-full rounded-[4px] border border-transparent border-b-[2px] border-b-[var(--cas-outline)] bg-[var(--cas-surface-high)] px-4 py-3 text-base text-[var(--cas-on-surface)] outline-none transition focus:border-b-[var(--cas-primary)] focus:bg-[var(--cas-surface-highest)]"
+            placeholder="Enter engraving text"
+          />
+          <div className="ml-4 mt-1.5 text-[11px] text-[var(--cas-on-surface-variant)]">Text is auto-fit to the texture width.</div>
+        </div>
+
+        <div>
+          <label className="mb-2 ml-1 block text-xs font-medium text-[var(--cas-on-surface-variant)]">QR link</label>
+          <input
+            type="url"
+            value={config.qrUrl}
+            onChange={(event) => handleChange('qrUrl', event.target.value)}
+            className="w-full rounded-[4px] border border-transparent border-b-[2px] border-b-[var(--cas-outline)] bg-[var(--cas-surface-high)] px-4 py-3 text-base text-[var(--cas-on-surface)] outline-none transition focus:border-b-[var(--cas-primary)] focus:bg-[var(--cas-surface-highest)]"
+            placeholder="https://cadautoscript.com"
+          />
+          <div className="ml-4 mt-1.5 text-[11px] text-[var(--cas-on-surface-variant)]">Default is the CAD AutoScript website.</div>
+        </div>
+
+        <div className="h-px bg-[var(--cas-outline-variant)]" />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className={LabelClass}>Plaque Title</label>
-            <input 
-              type="text" 
-              value={config.text}
-              onChange={(e) => handleChange('text', e.target.value)}
-              className={InputClass}
-              placeholder="Enter text..."
+            <label className="mb-2 ml-1 block text-xs font-medium text-[var(--cas-on-surface-variant)]">Width (mm)</label>
+            <input
+              type="number"
+              min={20}
+              step={1}
+              value={config.width}
+              onChange={(event) => handleChange('width', Number(event.target.value))}
+              className="w-full rounded-[4px] border border-transparent border-b-[2px] border-b-[var(--cas-outline)] bg-[var(--cas-surface-high)] px-4 py-3 text-base text-[var(--cas-on-surface)] outline-none transition focus:border-b-[var(--cas-primary)] focus:bg-[var(--cas-surface-highest)]"
             />
           </div>
           <div>
-            <label className={LabelClass}>QR Link Destination</label>
-            <input 
-              type="url" 
-              value={config.qrUrl}
-              onChange={(e) => handleChange('qrUrl', e.target.value)}
-              className={InputClass}
-              placeholder="https://..."
+            <label className="mb-2 ml-1 block text-xs font-medium text-[var(--cas-on-surface-variant)]">Height (mm)</label>
+            <input
+              type="number"
+              min={20}
+              step={1}
+              value={config.height}
+              onChange={(event) => handleChange('height', Number(event.target.value))}
+              className="w-full rounded-[4px] border border-transparent border-b-[2px] border-b-[var(--cas-outline)] bg-[var(--cas-surface-high)] px-4 py-3 text-base text-[var(--cas-on-surface)] outline-none transition focus:border-b-[var(--cas-primary)] focus:bg-[var(--cas-surface-highest)]"
+            />
+          </div>
+          <div>
+            <label className="mb-2 ml-1 block text-xs font-medium text-[var(--cas-on-surface-variant)]">Thickness (mm)</label>
+            <input
+              type="number"
+              min={1}
+              step={0.5}
+              value={config.depth}
+              onChange={(event) => handleChange('depth', Number(event.target.value))}
+              className="w-full rounded-[4px] border border-transparent border-b-[2px] border-b-[var(--cas-outline)] bg-[var(--cas-surface-high)] px-4 py-3 text-base text-[var(--cas-on-surface)] outline-none transition focus:border-b-[var(--cas-primary)] focus:bg-[var(--cas-surface-highest)]"
+            />
+          </div>
+          <div>
+            <label className="mb-2 ml-1 block text-xs font-medium text-[var(--cas-on-surface-variant)]">Corner radius (mm)</label>
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              value={config.radius}
+              onChange={(event) => handleChange('radius', Number(event.target.value))}
+              className="w-full rounded-[4px] border border-transparent border-b-[2px] border-b-[var(--cas-outline)] bg-[var(--cas-surface-high)] px-4 py-3 text-base text-[var(--cas-on-surface)] outline-none transition focus:border-b-[var(--cas-primary)] focus:bg-[var(--cas-surface-highest)]"
             />
           </div>
         </div>
-      </div>
 
-      {/* Material Section */}
-      <div className="bg-gray-800/50 p-6 rounded-2xl border border-gray-700/50">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <svg className="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-          Material & Finish
-        </h3>
-        <div className="grid grid-cols-2 gap-3">
-          {materials.map((mat) => (
-            <button
-              key={mat.id}
-              onClick={() => handleChange('material', mat.id)}
-              className={`relative overflow-hidden group p-3 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
-                config.material === mat.id 
-                ? 'border-blue-500 bg-gray-700 shadow-[0_0_15px_rgba(59,130,246,0.3)]' 
-                : 'border-gray-700 bg-gray-800 hover:bg-gray-750'
-              }`}
-            >
-              <div className={`w-8 h-8 rounded-full ${mat.color} shadow-inner border border-white/10`}></div>
-              <span className={`text-sm font-medium ${config.material === mat.id ? 'text-white' : 'text-gray-400'}`}>
-                {mat.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="flex cursor-pointer items-center gap-3 rounded-[12px] bg-[var(--cas-surface-high)] px-4 py-3 text-sm font-medium text-[var(--cas-on-surface)]">
+            <input
+              type="checkbox"
+              checked={config.border}
+              onChange={(event) => handleChange('border', event.target.checked)}
+              className="h-[18px] w-[18px] accent-[var(--cas-primary)]"
+            />
+            <span>Add border</span>
+          </label>
 
-      {/* Dimensions Section */}
-      <div className="bg-gray-800/50 p-6 rounded-2xl border border-gray-700/50">
-         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-          Dimensions (mm)
-        </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={LabelClass}>Width</label>
-            <input type="number" value={config.width} onChange={(e) => handleChange('width', Number(e.target.value))} className={InputClass} />
-          </div>
-          <div>
-            <label className={LabelClass}>Height</label>
-            <input type="number" value={config.height} onChange={(e) => handleChange('height', Number(e.target.value))} className={InputClass} />
-          </div>
-          <div>
-            <label className={LabelClass}>Corner Radius</label>
-            <input type="number" value={config.radius} onChange={(e) => handleChange('radius', Number(e.target.value))} className={InputClass} />
-          </div>
-          <div>
-             <label className={LabelClass}>Thickness</label>
-             <input type="number" value={config.depth} onChange={(e) => handleChange('depth', Number(e.target.value))} className={InputClass} />
-          </div>
-        </div>
-        <div className="mt-4">
-          <label className="flex items-center space-x-3 cursor-pointer group">
-             <div className={`w-6 h-6 rounded border flex items-center justify-center transition-colors ${config.border ? 'bg-blue-600 border-blue-600' : 'border-gray-600 bg-gray-900'}`}>
-                {config.border && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-             </div>
-             <input type="checkbox" className="hidden" checked={config.border} onChange={(e) => handleChange('border', e.target.checked)} />
-             <span className="text-gray-300 font-medium group-hover:text-white transition-colors">Engrave Border Line</span>
+          <label className="flex cursor-pointer items-center gap-3 rounded-[12px] bg-[var(--cas-surface-high)] px-4 py-3 text-sm font-medium text-[var(--cas-on-surface)]">
+            <input
+              type="checkbox"
+              checked={autoUpdate}
+              onChange={(event) => onAutoUpdateChange(event.target.checked)}
+              className="h-[18px] w-[18px] accent-[var(--cas-primary)]"
+            />
+            <span>Auto-update 3D</span>
           </label>
         </div>
-      </div>
 
-      {/* Actions */}
-      <div className="pt-4 space-y-3">
-        <button
+        <div>
+          <label className="mb-2 ml-1 block text-xs font-medium text-[var(--cas-on-surface-variant)]">Material</label>
+          <div className="flex flex-col gap-2">
+            {materials.map((material) => (
+              <button
+                key={material.id}
+                type="button"
+                onClick={() => handleChange('material', material.id)}
+                className={`flex items-center rounded-[8px] border px-4 py-3 text-left text-sm font-medium transition ${
+                  config.material === material.id
+                    ? 'border-transparent bg-[var(--cas-secondary-container)] text-[var(--cas-on-secondary-container)]'
+                    : 'border-[var(--cas-outline-variant)] bg-[var(--cas-surface-high)] text-[var(--cas-on-surface-variant)] hover:bg-[var(--cas-surface-highest)]'
+                }`}
+              >
+                {config.material === material.id ? <span className="mr-2 font-bold">✓</span> : null}
+                <span>{material.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div
+          className={`min-h-6 rounded-[8px] px-4 py-2 text-sm ${
+            validationMessage
+              ? 'block bg-[var(--cas-error-container)] text-[var(--cas-on-error-container)]'
+              : 'hidden'
+          }`}
+          aria-live="polite"
+        >
+          {validationMessage}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={onGeneratePreview}
+            disabled={isUpdatingPreview}
+            className="rounded-full bg-[var(--cas-primary)] px-5 py-3 text-sm font-semibold text-[var(--cas-on-primary)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isUpdatingPreview ? 'Updating...' : 'Update 3D preview'}
+          </button>
+          <button
+            type="button"
             onClick={onDownloadPDF}
-            disabled={isProcessing}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold uppercase tracking-wider shadow-lg shadow-blue-900/50 transition-all flex items-center justify-center gap-2"
-        >
-          {isProcessing ? (
-            <span>Generating...</span>
-          ) : (
-             <>
-               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-               Download PDF Proof
-             </>
-          )}
-        </button>
+            disabled={isGeneratingPdf}
+            className="rounded-full border border-[var(--cas-outline-variant)] bg-[var(--cas-surface-high)] px-5 py-3 text-sm font-semibold text-[var(--cas-primary)] transition hover:bg-[var(--cas-surface-highest)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isGeneratingPdf ? 'Generating...' : 'Download PDF report'}
+          </button>
+        </div>
 
         <button
-            onClick={onDownloadDXF}
-            disabled={isProcessing}
-            className="w-full py-4 bg-gray-700 hover:bg-gray-600 active:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 border border-gray-600"
+          type="button"
+          onClick={onShowDrawing}
+          className="rounded-full border border-[var(--cas-outline-variant)] bg-transparent px-5 py-3 text-sm font-semibold text-[var(--cas-on-surface)] transition hover:bg-[var(--cas-surface-high)]"
         >
-           <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-           Download CNC DXF
+          View drawing preview
         </button>
+
+        <div className="h-px bg-[var(--cas-outline-variant)]" />
+
+        <div className="space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--cas-on-surface)]">Additional exports</h3>
+            <p className="mt-1 text-xs text-[var(--cas-on-surface-variant)]">Keep the report-driven workflow from the utility app, plus local CAD exports from this React version.</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onDownloadDXF}
+            disabled={isExportingDxf}
+            className="w-full rounded-full border border-[var(--cas-outline-variant)] bg-[var(--cas-surface-high)] px-5 py-3 text-sm font-semibold text-[var(--cas-on-surface)] transition hover:bg-[var(--cas-surface-highest)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isExportingDxf ? 'Generating...' : 'Download DXF'}
+          </button>
+
+          <StepExportPanel config={config} />
+        </div>
       </div>
-    </div>
+    </section>
   );
 };

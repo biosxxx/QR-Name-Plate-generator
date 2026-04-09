@@ -1,44 +1,51 @@
-name: Deploy static content to Pages
+name: Deploy Game to Website
 
+# Срабатывать при пуше в ветку main
 on:
-  # Запуск при пуше в ветку main
   push:
-    branches: ["main"]
-
-  # Возможность ручного запуска из вкладки Actions
-  workflow_dispatch:
-
-# Права, необходимые для деплоя на Pages
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# Разрешаем только один одновременный деплой, пропускаем незавершенные
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+    branches:
+      - main
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      # 1. Скачиваем код игры
+      - name: Checkout Source
         uses: actions/checkout@v4
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      # 2. Ставим pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          # Загружаем весь репозиторий '.'
-          # Если сайт лежит в папке (например 'public'), укажи 'public'
-          path: '.'
+          version: 10.33.0
+          run_install: false
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      # 3. Ставим Node.js
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      # 4. Устанавливаем зависимости и собираем
+      - name: Install and Build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+          mv dist/index.html dist/app.html
+        # Теперь у нас есть папка dist с готовой игрой
+
+      # 5. Отправляем папку dist в репозиторий сайта
+      - name: Push to Website Repository
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          # Тот самый секрет, который мы создали
+          API_TOKEN_GITHUB: ${{ secrets.DEPLOY_TOKEN }}
+        with:
+          source-directory: 'dist'                    
+          destination-github-username: 'Biosxxx'
+          destination-repository-name: 'cadautoscript.com'
+          target-directory: 'static/utility-apps/qr-name-plate-generator' # Куда положить код         
+          user-email: 'bot@biosxxx.com'
+          target-branch: main

@@ -1,6 +1,24 @@
 import QRCode from 'qrcode';
 import { EngravingMapResult } from '../types';
 
+const DEFAULT_QR_URL = 'https://cadautoscript.com';
+
+export const buildQrModules = (qrUrl: string): boolean[][] => {
+  const qrRaw = QRCode.create(qrUrl || DEFAULT_QR_URL, { errorCorrectionLevel: 'M' });
+  const moduleCount = qrRaw.modules.size;
+  const modules: boolean[][] = [];
+
+  for (let rowIndex = 0; rowIndex < moduleCount; rowIndex += 1) {
+    const row: boolean[] = [];
+    for (let columnIndex = 0; columnIndex < moduleCount; columnIndex += 1) {
+      row.push(qrRaw.modules.get(rowIndex, columnIndex));
+    }
+    modules.push(row);
+  }
+
+  return modules;
+};
+
 export const generatePlaqueTexture = async (
   text: string,
   qrUrl: string,
@@ -24,19 +42,17 @@ export const generatePlaqueTexture = async (
   // No, usually UV mapping on a cube face stretches 0..1 to corners.
   // So we draw the design stretched to 1024x1024, and the 3D geometry handles the aspect ratio.
   
-  // Fill Background (Black for engraving map - assumes metal is white/grey and engraving is black? 
-  // Actually for bump map: Black = deep (engraved), White = surface)
-  ctx.fillStyle = 'white'; // Surface
+  ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, RESOLUTION, RESOLUTION);
   
-  ctx.fillStyle = 'black'; // Engraving
-  ctx.strokeStyle = 'black';
+  ctx.fillStyle = 'white';
+  ctx.strokeStyle = 'white';
 
   // 1. Border
   if (hasBorder) {
-    const borderWidth = 20;
+    const borderWidth = 15;
     ctx.lineWidth = borderWidth;
-    ctx.strokeRect(borderWidth/2, borderWidth/2, RESOLUTION - borderWidth, RESOLUTION - borderWidth);
+    ctx.strokeRect(borderWidth, borderWidth, RESOLUTION - borderWidth * 2, RESOLUTION - borderWidth * 2);
   }
 
   // 2. Text
@@ -44,37 +60,26 @@ export const generatePlaqueTexture = async (
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   
-  let fontSize = 120;
-  ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+  let fontSize = 160;
+  ctx.font = `800 ${fontSize}px Inter, Arial, sans-serif`;
   let metrics = ctx.measureText(text);
   
   // Fit text
-  while (metrics.width > RESOLUTION * 0.8 && fontSize > 20) {
-    fontSize -= 5;
-    ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+  while (metrics.width > RESOLUTION * 0.86 && fontSize > 12) {
+    fontSize -= 6;
+    ctx.font = `800 ${fontSize}px Inter, Arial, sans-serif`;
     metrics = ctx.measureText(text);
   }
   ctx.fillText(text, RESOLUTION / 2, textY);
 
   // 3. QR Code
-  // We need the raw modules for DXF export later, so we generate using create()
-  const qrRaw = QRCode.create(qrUrl || "https://example.com", { errorCorrectionLevel: 'M' });
-  const moduleCount = qrRaw.modules.size;
-  const modules: boolean[][] = [];
-  
-  // Extract boolean matrix
-  for(let r=0; r<moduleCount; r++) {
-    const row: boolean[] = [];
-    for(let c=0; c<moduleCount; c++) {
-      row.push(qrRaw.modules.get(r, c));
-    }
-    modules.push(row);
-  }
+  const modules = buildQrModules(qrUrl || DEFAULT_QR_URL);
+  const moduleCount = modules.length;
 
   // Draw QR to Canvas
-  const qrSize = RESOLUTION * 0.45;
+  const qrSize = RESOLUTION * 0.52;
   const qrX = (RESOLUTION - qrSize) / 2;
-  const qrY = RESOLUTION * 0.40;
+  const qrY = RESOLUTION * 0.35;
   const cellSize = qrSize / moduleCount;
 
   for (let r = 0; r < moduleCount; r++) {
@@ -91,43 +96,13 @@ export const generatePlaqueTexture = async (
   };
 };
 
-export const generatePreviewPDF = async (canvas: HTMLCanvasElement, widthMm: number, heightMm: number): Promise<void> => {
-  const { jsPDF } = await import('jspdf');
-  
-  // Orientation based on dimensions
-  const orientation = widthMm > heightMm ? 'l' : 'p';
-  const doc = new jsPDF({
-    orientation,
-    unit: 'mm',
-    format: 'a4'
+export const getQrPngDataUrl = async (text: string, sizePx = 256) =>
+  QRCode.toDataURL(text || DEFAULT_QR_URL, {
+    errorCorrectionLevel: 'M',
+    margin: 1,
+    width: sizePx,
+    color: {
+      dark: '#000000',
+      light: '#ffffff',
+    },
   });
-
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-
-  // Title
-  doc.setFontSize(18);
-  doc.text("Plaque Design Proof", 10, 10);
-  doc.setFontSize(10);
-  doc.text(`Dimensions: ${widthMm}mm x ${heightMm}mm`, 10, 16);
-
-  // Add Image
-  // Scale image to fit page with margins
-  const margin = 20;
-  const availableW = pageWidth - (margin * 2);
-  const availableH = pageHeight - 40; // minus header
-
-  const ratio = widthMm / heightMm;
-  let finalW = availableW;
-  let finalH = availableW / ratio;
-
-  if (finalH > availableH) {
-    finalH = availableH;
-    finalW = availableH * ratio;
-  }
-
-  const imgData = canvas.toDataURL('image/png');
-  doc.addImage(imgData, 'PNG', (pageWidth - finalW) / 2, 30, finalW, finalH);
-
-  doc.save('plaque-design.pdf');
-};

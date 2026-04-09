@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+:root {
+  --cas-background: #141218;
+  --cas-on-background: #e6e1e5;
+  --cas-surface: #141218;
+  --cas-surface-low: #1d1b20;
+  --cas-surface-high: #2b2930;
+  --cas-surface-highest: #36343b;
+  --cas-on-surface: #e6e1e5;
+  --cas-on-surface-variant: #cac4d0;
+  --cas-outline: #938f99;
+  --cas-outline-variant: #49454f;
+  --cas-primary: #d0bcff;
+  --cas-on-primary: #381e72;
+  --cas-secondary-container: #4a4458;
+  --cas-on-secondary-container: #e8def8;
+  --cas-error-container: #8c1d18;
+  --cas-on-error-container: #f9dedc;
+  --cas-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --cas-elevation-3: 0 4px 8px 3px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(208, 188, 255, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(239, 184, 200, 0.05) 0%, transparent 40%),
+    var(--cas-background);
+  color: var(--cas-on-background);
+}

@@ -67,7 +67,7 @@ export const generateDXF = (config: PlaqueConfig, qrModules: boolean[][]): strin
   // Coordinate system: Bottom-Left is 0,0 usually.
   // Plaque center:
   const cx = w / 2;
-  const cy = h * 0.8; // Text is usually at top 20%
+  const cy = h * 0.8;
 
   pair(0, "TEXT");
   pair(8, "ENGRAVE_LAYER");
@@ -83,9 +83,9 @@ export const generateDXF = (config: PlaqueConfig, qrModules: boolean[][]): strin
   // 3. The QR Code (Engraving Layer)
   // We need to draw a solid square (HATCH or SOLID) for every dark module.
   // QR Center:
-  const qrSize = Math.min(w, h) * 0.4;
+  const qrSize = Math.min(w, h) * 0.52;
   const qrStartX = (w - qrSize) / 2;
-  const qrStartY = (h * 0.35) - (qrSize / 2); // Roughly centered in bottom half
+  const qrStartY = h * 0.35;
   
   const moduleCount = qrModules.length;
   const moduleSize = qrSize / moduleCount;
@@ -95,7 +95,7 @@ export const generateDXF = (config: PlaqueConfig, qrModules: boolean[][]): strin
       if (qrModules[r][c]) {
         // Draw a SOLID (filled quad)
         const x = qrStartX + c * moduleSize;
-        const y = (qrStartY + qrSize) - r * moduleSize; // Flip Y because image coords vs cartesian
+        const y = (qrStartY + qrSize) - r * moduleSize;
 
         pair(0, "SOLID");
         pair(8, "ENGRAVE_LAYER");
