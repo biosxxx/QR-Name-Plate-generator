@@ -46,6 +46,6 @@ jobs:
           source-directory: 'dist'                    
           destination-github-username: 'Biosxxx'
           destination-repository-name: 'cadautoscript.com'
-          target-directory: 'static/utility-apps/qr-name-plate-generator' # Куда положить код         
+          target-directory: 'static/utility-apps/qr-nameplate' # Куда положить код         
           user-email: 'bot@biosxxx.com'
           target-branch: main
