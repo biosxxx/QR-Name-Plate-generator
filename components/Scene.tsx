@@ -1,12 +1,37 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { Environment, OrbitControls } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import * as THREE from 'three';
 import { MaterialType, PlaqueConfig } from '../types';
 import { computePlaqueCadGeometry } from '../cad/geometry/compute-plaque-geometry';
 import { buildQrModules } from '../utils/canvasGenerator';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import helvetikerBold from 'three/examples/fonts/helvetiker_bold.typeface.json';
+
+/**
+ * Procedurally generated environment lighting. Replaces drei's
+ * <Environment preset="city" />, which downloads an HDR from an external CDN —
+ * blocked by the cadautoscript.com Content Security Policy, crashing the
+ * scene. RoomEnvironment renders a neutral studio box on the GPU at startup:
+ * no network, same metallic reflections.
+ */
+const ProceduralEnvironment: React.FC = () => {
+  const { gl, scene } = useThree();
+
+  useEffect(() => {
+    const pmrem = new THREE.PMREMGenerator(gl);
+    const envTexture = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environment = envTexture;
+    return () => {
+      scene.environment = null;
+      envTexture.dispose();
+      pmrem.dispose();
+    };
+  }, [gl, scene]);
+
+  return null;
+};
 
 interface SceneProps {
   config: PlaqueConfig;
@@ -347,9 +372,7 @@ export const Scene: React.FC<SceneProps> = ({ config, onTextureReady }) => {
         <ambientLight intensity={0.72} />
         <directionalLight position={[8, 10, 14]} intensity={1.45} castShadow />
         <directionalLight position={[-6, -2, 10]} intensity={0.45} />
-        <Suspense fallback={null}>
-          <Environment preset="city" />
-        </Suspense>
+        <ProceduralEnvironment />
         <PlaqueModel config={config} onTextureReady={handleSceneReady} />
       </Canvas>
     </div>
