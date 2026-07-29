@@ -32,7 +32,8 @@ const getWorker = () => {
     return worker;
   }
 
-  worker = new Worker(new URL('./cad-worker.ts', import.meta.url), { type: 'module' });
+  const instance = new Worker(new URL('./cad-worker.ts', import.meta.url), { type: 'module' });
+  worker = instance;
   worker.addEventListener('message', (event: MessageEvent<PlaqueWorkerMessage>) => {
     const message = event.data;
     if (!message || typeof message !== 'object') {
@@ -67,6 +68,16 @@ const getWorker = () => {
     const error = event.error instanceof Error ? event.error : new Error(String(event.message));
     pending.forEach((handler) => handler.reject(error));
     pending.clear();
+
+    // The worker is a module-level singleton, so without this the dead
+    // instance stayed cached: every later export reused a worker that could
+    // no longer answer, leaving its promise pending forever (the OpenCascade
+    // WASM heap retained along with it). Dropping the reference lets the next
+    // call start a fresh worker (cadautoscript.com#101).
+    if (worker === instance) {
+      worker = null;
+    }
+    instance.terminate();
   });
 
   return worker;
